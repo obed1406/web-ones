@@ -5,59 +5,189 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TaskFlow - Gestor de Proyectos</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
-    <div class="app-container">
+
+    <!-- ===== PANTALLA DE LOGIN ===== -->
+    <div id="login-screen">
+        <div class="login-card">
+            <div class="login-logo">
+                <span class="login-logo-icon">✦</span>
+                <h1>TaskFlow</h1>
+            </div>
+            <p class="login-subtitle">Gestión de proyectos inteligente</p>
+
+            <div id="login-mode-select">
+                <p class="login-label">¿Cómo deseas ingresar?</p>
+                <div class="login-role-btns">
+                    <button class="login-role-btn" onclick="showLoginForm('admin')">
+                        <span class="role-icon">🛡️</span>
+                        <span class="role-name">Administrador</span>
+                        <span class="role-desc">Acceso total a todos los proyectos</span>
+                    </button>
+                    <button class="login-role-btn" onclick="showLoginForm('user')">
+                        <span class="role-icon">👤</span>
+                        <span class="role-name">Usuario</span>
+                        <span class="role-desc">Acceso a mis proyectos</span>
+                    </button>
+                </div>
+            </div>
+
+            <div id="login-form-container" style="display:none;">
+                <p class="login-label" id="login-form-title"></p>
+
+                <!-- Tabs Login / Registro -->
+                <div class="login-tabs">
+                    <button class="login-tab active" id="tab-login" onclick="switchAuthTab('login')">Iniciar sesión</button>
+                    <button class="login-tab" id="tab-register" onclick="switchAuthTab('register')" id="tab-register-btn">Crear cuenta</button>
+                </div>
+
+                <!-- Panel Login -->
+                <div id="auth-panel-login">
+                    <input type="text" id="login-username" placeholder="Nombre de usuario" class="login-input" onkeydown="if(event.key==='Enter') doLogin()">
+                    <input type="password" id="login-password" placeholder="Contraseña" class="login-input" onkeydown="if(event.key==='Enter') doLogin()">
+                    <div id="login-error" class="login-error" style="display:none;"></div>
+                    <button class="login-btn-submit" onclick="doLogin()">Ingresar</button>
+                </div>
+
+                <!-- Panel Registro -->
+                <div id="auth-panel-register" style="display:none;">
+                    <input type="text" id="reg-username" placeholder="Elige un nombre de usuario" class="login-input" onkeydown="if(event.key==='Enter') doRegister()">
+                    <input type="password" id="reg-password" placeholder="Crea una contraseña" class="login-input" oninput="updateStrengthBar(this.value)" onkeydown="if(event.key==='Enter') doRegister()">
+                    <div id="strength-bar-wrap" style="margin:-8px 0 14px 0;">
+                        <div style="height:4px; border-radius:4px; background:rgba(255,255,255,0.08); overflow:hidden;">
+                            <div id="strength-bar" style="height:100%; width:0%; border-radius:4px; transition:width 0.3s, background 0.3s;"></div>
+                        </div>
+                        <div id="strength-label" style="font-size:0.75em; margin-top:4px; color:rgba(255,255,255,0.35);"></div>
+                    </div>
+                    <input type="password" id="reg-password2" placeholder="Confirma tu contraseña" class="login-input" onkeydown="if(event.key==='Enter') doRegister()">
+                    <div id="register-error" class="login-error" style="display:none;"></div>
+                    <button class="login-btn-submit" onclick="doRegister()">Crear cuenta</button>
+                </div>
+
+                <button class="login-btn-back" onclick="backToRoleSelect()">← Volver</button>
+                <div class="login-hint" id="login-hint"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== APP PRINCIPAL ===== -->
+    <div class="app-container" id="main-app" style="display:none;">
         <aside class="sidebar">
-            <h2>TaskFlow</h2>
+            <div class="sidebar-brand">
+                <span class="sidebar-brand-icon">✦</span>
+                <h2>TaskFlow</h2>
+            </div>
+
+            <div class="user-badge" id="sidebar-user-badge"></div>
+
             <nav>
-                <button onclick="showView('dashboard')">Dashboard</button>
-                <button onclick="showView('projects')">Proyectos</button>
-                <button onclick="showView('kanban')">Tablero Kanban</button>
-                <button onclick="showView('calendar')">Calendario</button>
-                <button onclick="showView('users')">Usuarios</button>
+                <button onclick="showView('dashboard')"><span class="nav-icon">⊞</span> Dashboard</button>
+                <button onclick="showView('projects')"><span class="nav-icon">📁</span> Proyectos</button>
+                <button onclick="showView('kanban')"><span class="nav-icon">▦</span> Tablero Kanban</button>
+                <button onclick="showView('calendar')"><span class="nav-icon">📅</span> Calendario</button>
+                <button id="nav-users-btn" onclick="showView('users')" style="display:none;"><span class="nav-icon">👥</span> Usuarios</button>
             </nav>
+
             <div class="settings-menu">
-                <button onclick="toggleTheme()">Modo Claro/Oscuro</button>
-                <button onclick="exportData()">Exportar JSON</button>
+                <div onclick="toggleTheme()" id="theme-toggle-btn" style="width:64px; height:32px; border-radius:50px; border:2px solid rgba(255,255,255,0.4); cursor:pointer; position:relative; transition:background 0.3s; margin-bottom:10px; margin-top:5px;">
+                    <div id="theme-toggle-knob" style="position:absolute; top:3px; left:3px; width:22px; height:22px; border-radius:50%; background:white; display:flex; align-items:center; justify-content:center; font-size:12px; transition:transform 0.3s; box-shadow:0 1px 4px rgba(0,0,0,0.3);">☀️</div>
+                </div>
+                <button onclick="exportData()">⬇ Exportar JSON</button>
                 <input type="file" id="import-file" accept=".json" style="display: none;" onchange="importData(event)">
-                <button onclick="document.getElementById('import-file').click()">Importar JSON</button>
-                <button class="danger" onclick="clearData()">Borrar Datos</button>
+                <button onclick="document.getElementById('import-file').click()">⬆ Importar JSON</button>
+                <button class="danger" onclick="clearData()">🗑 Borrar Datos</button>
+                <button class="logout-btn" onclick="logout()">⏻ Cerrar sesión</button>
             </div>
         </aside>
 
         <main class="main-content">
-            
+
+            <!-- DASHBOARD -->
             <section id="view-dashboard" class="view active">
                 <h1>Dashboard</h1>
+                <div id="admin-user-selector-bar" style="display:none; margin-bottom:20px; background:var(--card-bg); border:1px solid var(--border-color); border-radius:8px; padding:12px 18px; display:none; align-items:center; gap:12px;">
+                    <label style="font-weight:600; white-space:nowrap;">👁 Ver como:</label>
+                    <select id="admin-user-selector" onchange="switchAdminView(this.value)" style="padding:8px 12px; font-size:0.95em; border-radius:5px; border:1px solid var(--border-color); background:var(--card-bg); color:var(--text-color); flex:1; max-width:300px;">
+                        <option value="all">Todos los usuarios (global)</option>
+                    </select>
+                </div>
+
                 <div class="grid-container">
-                    <div class="card">
-                        <h3>Total de Proyectos</h3>
-                        <p id="dash-projects" style="font-size: 2em; font-weight: bold;">0</p>
+                    <div class="card stat-card">
+                        <div class="stat-icon">📁</div>
+                        <div>
+                            <h3>Proyectos</h3>
+                            <p id="dash-projects" class="stat-number">0</p>
+                        </div>
                     </div>
-                    <div class="card">
-                        <h3>Tareas Pendientes</h3>
-                        <p id="dash-pending" style="font-size: 2em; font-weight: bold; color: var(--danger-color);">0</p>
+                    <div class="card stat-card">
+                        <div class="stat-icon" style="color:var(--danger-color)">⏳</div>
+                        <div>
+                            <h3>Pendientes</h3>
+                            <p id="dash-pending" class="stat-number" style="color: var(--danger-color);">0</p>
+                        </div>
                     </div>
-                    <div class="card">
-                        <h3>Tareas Completadas</h3>
-                        <p id="dash-done" style="font-size: 2em; font-weight: bold; color: #2ecc71;">0</p>
+                    <div class="card stat-card">
+                        <div class="stat-icon" style="color:#f39c12">⚙</div>
+                        <div>
+                            <h3>En Progreso</h3>
+                            <p id="dash-progress" class="stat-number" style="color: #f39c12;">0</p>
+                        </div>
+                    </div>
+                    <div class="card stat-card">
+                        <div class="stat-icon" style="color:#2ecc71">✓</div>
+                        <div>
+                            <h3>Completadas</h3>
+                            <p id="dash-done" class="stat-number" style="color: #2ecc71;">0</p>
+                        </div>
                     </div>
                 </div>
-                
-                <div style="margin-top: 30px; display: flex; gap: 20px; flex-wrap: wrap;">
-                    <div class="card" style="flex: 1; min-width: 300px;">
-                        <h3>Progreso Global</h3>
-                        <progress id="global-progress" value="0" max="100" style="width: 100%; height: 20px; margin-top: 10px;"></progress>
-                        <p id="global-progress-text" style="margin-top: 10px;">0% Completado</p>
+
+                <!-- GRÁFICOS -->
+                <div class="charts-row" style="margin-top:28px;">
+                    <div class="card chart-card">
+                        <h3 class="chart-title">Estado de Tareas</h3>
+                        <div class="chart-wrapper">
+                            <canvas id="chart-donut"></canvas>
+                        </div>
                     </div>
-                    <div class="card" style="flex: 1; min-width: 300px;">
+                    <div class="card chart-card">
+                        <h3 class="chart-title">Tareas por Prioridad</h3>
+                        <div class="chart-wrapper">
+                            <canvas id="chart-priority"></canvas>
+                        </div>
+                    </div>
+                    <div class="card chart-card">
+                        <h3 class="chart-title">Progreso por Proyecto</h3>
+                        <div class="chart-wrapper">
+                            <canvas id="chart-projects-bar"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 24px; display: flex; gap: 20px; flex-wrap: wrap;">
+                    <div class="card" style="flex: 1; min-width: 280px;">
+                        <h3>Progreso Global</h3>
+                        <div class="progress-track" style="margin-top:14px;">
+                            <div id="global-progress-fill" class="progress-fill" style="width:0%"></div>
+                        </div>
+                        <p id="global-progress-text" style="margin-top: 10px; font-weight:600;">0% Completado</p>
+                    </div>
+                    <div class="card" style="flex: 1; min-width: 280px;">
                         <h3>Actividad Reciente</h3>
                         <ul id="activity-log" style="list-style: none; padding: 0; margin-top: 10px;"></ul>
                     </div>
                 </div>
+
+                <div style="margin-top: 28px;">
+                    <h2 style="margin-bottom: 16px;">Progreso por Proyecto</h2>
+                    <div id="projects-progress-list"></div>
+                </div>
             </section>
 
+            <!-- PROYECTOS -->
             <section id="view-projects" class="view hidden">
                 <div class="header-actions">
                     <h1>Proyectos</h1>
@@ -66,12 +196,23 @@
                 <div id="project-list" class="grid-container"></div>
             </section>
 
+            <!-- KANBAN -->
             <section id="view-kanban" class="view hidden">
                 <div class="header-actions">
-                    <h1 id="kanban-title">Selecciona un Proyecto</h1>
-                    <button onclick="openModal('modal-task')" class="btn-primary">+ Nueva Tarea</button>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <h1 id="kanban-title" style="margin:0;">Tablero:</h1>
+                        <select id="kanban-project-selector" onchange="switchKanbanProject(this.value)" style="padding: 8px 12px; font-size: 1em; border-radius: 5px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color); cursor: pointer; font-weight: bold;"></select>
+                    </div>
+                    <button onclick="openModal('modal-task')" class="btn-primary" id="btn-new-task">+ Nueva Tarea</button>
                 </div>
-                <div class="kanban-board">
+
+                <div id="kanban-empty-state" style="display: none; text-align: center; padding: 80px 20px; background: var(--card-bg); border-radius: 8px; border: 1px dashed var(--border-color); margin-top: 20px;">
+                    <h2 style="margin-bottom: 15px; opacity: 0.7;">Aún no tienes proyectos</h2>
+                    <p style="opacity: 0.6; margin-bottom: 25px;">Debes crear un proyecto antes de poder añadir tareas al tablero.</p>
+                    <button onclick="openModal('modal-project')" class="btn-primary">Crear mi primer proyecto</button>
+                </div>
+
+                <div class="kanban-board" id="kanban-board-container">
                     <div class="kanban-column" id="col-pending" ondragover="allowDrop(event)" ondrop="drop(event, 'pending')">
                         <h3>Pendientes</h3>
                         <div class="task-list" id="list-pending"></div>
@@ -87,6 +228,7 @@
                 </div>
             </section>
 
+            <!-- CALENDARIO -->
             <section id="view-calendar" class="view hidden">
                 <div class="header-actions">
                     <h1>Calendario de Entregas</h1>
@@ -102,10 +244,12 @@
                 <div id="calendar-grid" class="calendar-grid"></div>
             </section>
 
+            <!-- USUARIOS (solo admin) -->
             <section id="view-users" class="view hidden">
                 <h1>Gestión de Usuarios</h1>
-                <div class="card" style="margin-bottom: 20px; display: flex; gap: 10px;">
-                    <input type="text" id="new-user-name" placeholder="Nombre del usuario" style="flex: 1; padding: 10px;">
+                <div class="card" style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap:wrap;">
+                    <input type="text" id="new-user-name" placeholder="Nombre de usuario" style="flex: 1; min-width:180px; padding: 10px;" onkeydown="if(event.key==='Enter') createUser()">
+                    <input type="password" id="new-user-password" placeholder="Contraseña" style="flex: 1; min-width:180px; padding: 10px;" onkeydown="if(event.key==='Enter') createUser()">
                     <button onclick="createUser()" class="btn-primary">Añadir Usuario</button>
                 </div>
                 <ul id="users-list" style="list-style: none; padding: 0;"></ul>
@@ -114,10 +258,11 @@
         </main>
     </div>
 
+    <!-- MODAL PROYECTO -->
     <div id="modal-project" class="modal hidden">
         <div class="modal-content">
             <h2>Crear Proyecto</h2>
-            <input type="text" id="project-name" placeholder="Nombre del proyecto" required style="width: 100%; padding: 10px; margin: 15px 0;">
+            <input type="text" id="project-name" placeholder="Nombre del proyecto" required style="width: 100%; padding: 10px; margin: 15px 0;" onkeydown="if(event.key==='Enter') saveProject()">
             <div class="modal-actions">
                 <button onclick="closeModal('modal-project')">Cancelar</button>
                 <button onclick="saveProject()" class="btn-primary">Guardar</button>
@@ -125,17 +270,17 @@
         </div>
     </div>
 
+    <!-- MODAL TAREA -->
     <div id="modal-task" class="modal hidden">
         <div class="modal-content">
             <h2>Crear Tarea</h2>
-            <input type="text" id="task-name" placeholder="Título de la tarea" required style="width: 100%; padding: 10px; margin-top: 15px;">
+            <input type="text" id="task-name" placeholder="Título de la tarea" required style="width: 100%; padding: 10px; margin-top: 15px;" onkeydown="if(event.key==='Enter') saveTask()">
             <select id="task-priority" style="width: 100%; padding: 10px; margin-top: 15px;">
                 <option value="baja">Prioridad Baja</option>
                 <option value="media">Prioridad Media</option>
                 <option value="alta">Prioridad Alta</option>
             </select>
-            <input type="date" id="task-due-date" required style="width: 100%; padding: 10px; margin: 15px 0;">
-            
+            <input type="date" id="task-due-date" required style="width: 100%; padding: 10px; margin: 15px 0;" onkeydown="if(event.key==='Enter'){ event.preventDefault(); saveTask(); }">
             <div class="modal-actions">
                 <button onclick="closeModal('modal-task')">Cancelar</button>
                 <button onclick="saveTask()" class="btn-primary">Guardar</button>
